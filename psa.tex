@@ -61,11 +61,11 @@ El código del módulo es el siguiente:
 \begin{lstlisting}[language=C]
 bool validate_SPI()
 {
-    uint8_t spi_write[3] = {1, 2, 3};
-    uint8_t spi_read[3] = {4, 5, 6};
+    uint8_t spi_write[5] = {1, 2, 3, 4, 5};
+    uint8_t spi_read[5] = {6, 7, 8, 9, 10};
     uint8_t status = NORMAL;
-    SPI0_WriteRead(&spi_write[0], 3, &spi_read[0], 3);
-    for(uint8_t i = 0; i < 3; ++i)
+    SPI0_WriteRead(&spi_write[0], 5, &spi_read[0], 5);
+    for(uint8_t i = 0; i < 5; ++i)
     {
         if(spi_write[i] != spi_read[i])
         {
@@ -83,6 +83,20 @@ bool validate_SPI()
 Las pruebas de este nivel se realizan considerando un conocimiento pleno sobre el código fuente.
 Por este motivo se realizarán bajo el esquema de \emph{Elementary Comparison Test}.
 
+\begin{table}[H]
+	\centering
+	\begin{tabular}{c|cc}
+        C1 \& C2 \& C3 \& C4 \& C5 & NORMAL & ERROR \\ \hline
+        1.1.1.1.1                  & +      &       \\
+        1.1.1.1.0                  &        & +     \\
+        1.1.1.0.1                  &        & +     \\
+        1.1.0.1.1                  &        & +     \\
+        1.0.1.1.1                  &        & +     \\
+        0.1.1.1.1                  &        & +     \\
+	\end{tabular}
+\end{table}
+
+Para realizar estas pruebas se necesitará realizar un \emph{mock} de la función de escritura y lectura del periférico SPI.
 
 \section{Pruebas a nivel aceptación}
 \label{sec:lvlaceptacion}
@@ -99,7 +113,6 @@ El caso ``1'' consiste en dejar conectado del \emph{loopback} del periférico, m
 	\label{fig:ctm}
 \end{figure}
 
-\newpage
 La pruebas se realizarancon el siguiente script de \emph{Python}:
 
 \begin{lstlisting}[language=Python]
