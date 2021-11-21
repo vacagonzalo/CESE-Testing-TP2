@@ -10,6 +10,8 @@
 \usepackage{float}
 \usepackage{caption}
 \captionsetup[table]{labelformat=empty}
+\usepackage{listings}
+
 
 \def\doctype{PRUEBAS DE ACEPTACIÓN Y SISTEMA}
 \title{Evaluador de microcontroladores para misiones espaciales}
@@ -52,30 +54,75 @@
 
 Este documento tiene el objetivo de planificar los ensayos de nivel de sistema y de nivel de aceptación para un módulo del proyecto ``\MyTitle''.
 
-El módulo seleccionado es el ``Generador de informe de secuencia'', quién se encarga reportar el estado del microcontrolador al ``Sistema de inyección de \emph{soft-errors}''.
+El módulo seleccionado es el ``Validador de periférico SPI'', quién deberá determinar si el integrado aún cuenta con un sistema SPI funcional.
+
+El código del módulo es el siguiente:
+
+\begin{lstlisting}[language=C]
+bool validate_SPI()
+{
+    uint8_t spi_write[3] = {1, 2, 3};
+    uint8_t spi_read[3] = {4, 5, 6};
+    uint8_t status = NORMAL;
+    SPI0_WriteRead(&spi_write[0], 3, &spi_read[0], 3);
+    for(uint8_t i = 0; i < 3; ++i)
+    {
+        if(spi_write[i] != spi_read[i])
+        {
+            status = ERROR;
+            break;
+        }
+    }
+    return status;
+}
+\end{lstlisting}
 
 \section{Pruebas a nivel sistemas}
 \label{sec:lvlsistema}
 
-\subsection{Requerimientos de software}
-\label{sub:reqsoftware}
+Las pruebas de este nivel se realizan considerando un conocimiento pleno sobre el código fuente.
+Por este motivo se realizarán bajo el esquema de \emph{Elementary Comparison Test}.
 
-\begin{itemize}
-    \item El reset del watchdog pondrá en 1 el bit menos significativo del byte de periféricos.
-    \item Una falla en el periférico SPI pondrá en 1 el bit 2 del byte de periféricos.
-    \item Se generará un byte de CRC al final de la trama utilizando el polinomio: 
-$$ 0x^{7} + 0x^{6} + 0x^{5} + x^{4} + x^{3} + x^{2} + 0x^{1} + 0x $$
-\end{itemize}
 
 \section{Pruebas a nivel aceptación}
 \label{sec:lvlaceptacion}
 
-\subsection{Requerimientos de usuario}
-\label{sub:requsuario}
+Las pruebas de este nivel se realizan considerando al módulo como una caja negra.
+Por este motivo se realizarán bajo el esquema de \emph{Classification-tree Method}.
+En la figura \ref{fig:ctm} se puede observar el diagrama con los dos casos de prueba.
+El caso ``1'' consiste en dejar conectado del \emph{loopback} del periférico, mientras que el caso ``2'' se realiza desconectado la conexión entre la entrada y salida del módulo SPI.
 
-\begin{itemize}
-    \item Los reportes tendrán un número de 32 bits que lo identifique.
-    \item Los reportes tendrán un byte que informe el estado de los periféricos.
-\end{itemize}
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.7\textwidth]{./img/ctm.png}
+    \caption{Diagrama \emph{Classification-tree Method}.}
+	\label{fig:ctm}
+\end{figure}
+
+\newpage
+La pruebas se realizarancon el siguiente script de \emph{Python}:
+
+\begin{lstlisting}[language=Python]
+from serial import Serial
+import signal, os
+
+def handler(signum, frame):
+    print("")
+    print("Terminal ended by user")
+    exit()
+
+def main():
+    with Serial('/dev/ttyACM0', 9600, timeout=1) as s:
+        while True:
+            x = s.read()
+            if x == b'R':
+                f = ord(s.read())
+                c = int.from_bytes(s.read(4), 'little')
+                print("FLAGS:", f, "COUNTER:", c, end='\r')
+
+if __name__ == "__main__":
+    signal.signal(signal.SIGINT, handler)
+    main()
+\end{lstlisting}
 
 \end{document}
